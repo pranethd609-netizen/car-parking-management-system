@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ParkFlow Pro - Smart Car Parking Management System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- FontAwesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- QRCode.js CDN for Scannable QR Codes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-blue-600 selection:text-white">
+
+  <!-- TOP APP NAVIGATION -->
+  <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 lg:px-8 py-3">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+      
+      <!-- Brand & Status -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
+          <i class="fa-solid fa-square-parking text-2xl"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-extrabold text-lg text-white tracking-tight">ParkFlow <span class="text-blue-500">Pro</span></h1>
+            <span id="connectionStatusBadge" class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-available"></span> System Online
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Multi-Level Smart Parking, Analytics & Automated Billing</p>
+        </div>
+      </div>
+
+      <!-- Live Clock & Quick Actions -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Live Clock -->
+        <div class="hidden sm:flex flex-col items-end px-3 py-1 bg-slate-800/60 rounded-lg border border-slate-700/60 font-mono">
+          <div id="digitalClock" class="text-xs font-bold text-slate-200">--:--:--</div>
+          <div id="digitalDate" class="text-[10px] text-slate-400">Loading date...</div>
+        </div>
+
+        <!-- Audio Synthesizer Sound Toggle -->
+        <button id="btnToggleSound" class="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition" title="Sound Effects Toggle">
+          <i class="fa-solid fa-volume-high text-emerald-400"></i>
+        </button>
+
+        <!-- Action Buttons -->
+        <button id="btnQuickCheckIn" class="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg shadow-md shadow-emerald-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          <span>Check-In</span>
+        </button>
+
+        <button id="btnQuickCheckOut" class="inline-flex items-center gap-2 px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs rounded-lg shadow-md shadow-rose-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span>Check-Out & Pay</span>
+        </button>
+
+        <button id="btnTariffRates" class="inline-flex items-center gap-2 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg border border-slate-700 transition">
+          <i class="fa-solid fa-tags text-blue-400"></i>
+          <span>Tariffs</span>
+        </button>
+
+        <button id="btnRefreshAll" class="p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 transition" title="Refresh Dashboard">
+          <i class="fa-solid fa-rotate"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 space-y-6">
+
+    <!-- STAT METRICS CARDS -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      
+      <!-- Total Capacity -->
+      <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 shadow-sm relative overflow-hidden group">
+        <div class="flex items-center justify-between text-slate-400 text-xs font-medium mb-2">
+          <span>TOTAL CAPACITY</span>
+          <i class="fa-solid fa-warehouse text-slate-500 group-hover:text-blue-400 transition-colors"></i>
+        </div>
+        <div class="flex items-baseline justify-between">
+          <div id="statTotalSlots" class="text-2xl font-black text-white font-mono">--</div>
+          <span class="text-[11px] font-medium text-slate-400">3 Floors</span>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center justify-between">
+          <span>Sedan, EV, SUV & Bike</span>
+          <span id="statAvgDuration" class="text-blue-400 font-mono text-[10px]">--h avg</span>
+        </div>
+      </div>
+
+      <!-- Occupied Slots -->
+      <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 shadow-sm relative overflow-hidden group">
+        <div class="flex items-center justify-between text-rose-400 text-xs font-medium mb-2">
+          <span>CURRENT OCCUPANCY</span>
+          <i class="fa-solid fa-car-side text-rose-500"></i>
+        </div>
+        <div class="flex items-baseline justify-between">
+          <div id="statOccupiedSlots" class="text-2xl font-black text-rose-400 font-mono">--</div>
+          <span id="statOccupancyRate" class="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">--%</span>
+        </div>
+        <div class="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+          <div id="statOccupancyProgress" class="h-full bg-rose-500 transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Available Slots -->
+      <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 shadow-sm relative overflow-hidden group">
+        <div class="flex items-center justify-between text-emerald-400 text-xs font-medium mb-2">
+          <span>FREE BAYS AVAILABLE</span>
+          <i class="fa-solid fa-circle-check text-emerald-500"></i>
+        </div>
+        <div class="flex items-baseline justify-between">
+          <div id="statAvailableSlots" class="text-2xl font-black text-emerald-400 font-mono">--</div>
+          <span class="text-[11px] text-emerald-400 font-medium">Ready to Park</span>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Instant slot assignment
+        </div>
+      </div>
+
+      <!-- Total Revenue Today -->
+      <div class="bg-slate-900/80 rounded-2xl p-4 border border-slate-800 shadow-sm relative overflow-hidden group">
+        <div class="flex items-center justify-between text-blue-400 text-xs font-medium mb-2">
+          <span>TODAY'S REVENUE</span>
+          <i class="fa-solid fa-cash-register text-blue-500"></i>
+        </div>
+        <div class="flex items-baseline justify-between">
+          <div id="statTotalRevenue" class="text-2xl font-black text-blue-400 font-mono">$0.00</div>
+          <span class="text-[11px] text-slate-400 font-mono">8% Tax Incl.</span>
+        </div>
+        <div class="mt-2 text-[11px] text-slate-400">Automated POS billing collected</div>
+      </div>
+
+    </section>
+
+    <!-- 2D PARKING VISUALIZER SECTION -->
+    <section class="bg-slate-900/80 rounded-2xl border border-slate-800 p-4 lg:p-6 shadow-xl space-y-5">
+      
+      <!-- Visualizer Header Toolbar -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+        
+        <!-- Floor Selector Tabs -->
+        <div class="flex items-center gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 self-start">
+          <button class="floor-tab px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all bg-blue-600 text-white shadow-md flex items-center gap-2" data-floor="1">
+            <i class="fa-solid fa-charging-station text-cyan-300"></i>
+            <span>Floor 1 (Ground & EV)</span>
+            <span id="floor1Badge" class="text-[10px] bg-black/30 px-1.5 py-0.2 rounded font-mono font-normal">--</span>
+          </button>
+          <button class="floor-tab px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-2" data-floor="2">
+            <i class="fa-solid fa-crown text-amber-400"></i>
+            <span>Floor 2 (SUVs & VIP)</span>
+            <span id="floor2Badge" class="text-[10px] bg-black/30 px-1.5 py-0.2 rounded font-mono font-normal">--</span>
+          </button>
+          <button class="floor-tab px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all bg-slate-800 text-slate-300 hover:bg-slate-700 flex items-center gap-2" data-floor="3">
+            <i class="fa-solid fa-motorcycle text-emerald-400"></i>
+            <span>Floor 3 (Standard & Bikes)</span>
+            <span id="floor3Badge" class="text-[10px] bg-black/30 px-1.5 py-0.2 rounded font-mono font-normal">--</span>
+          </button>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="flex flex-wrap items-center gap-3">
+          
+          <!-- Search Input -->
+          <div class="relative min-w-[220px]">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+            <input id="globalSearchInput" type="text" placeholder="Search Slot #, Plate or Driver..." class="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono transition">
+          </div>
+
+          <!-- Status Filters -->
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-xs">
+            <button class="filter-tab px-2.5 py-1 rounded text-white bg-slate-700 border border-slate-500 font-medium transition" data-status="all">All</button>
+            <button class="filter-tab px-2.5 py-1 rounded text-slate-400 hover:text-white border border-transparent font-medium transition" data-status="available">Available</button>
+            <button class="filter-tab px-2.5 py-1 rounded text-slate-400 hover:text-white border border-transparent font-medium transition" data-status="occupied">Occupied</button>
+            <button class="filter-tab px-2.5 py-1 rounded text-slate-400 hover:text-white border border-transparent font-medium transition" data-status="reserved">VIP</button>
+            <button class="filter-tab px-2.5 py-1 rounded text-slate-400 hover:text-white border border-transparent font-medium transition" data-status="maintenance">Closed</button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Parking Bay Legend -->
+      <div class="flex flex-wrap items-center justify-between text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 gap-2">
+        <div class="flex items-center gap-4 flex-wrap">
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500"></span> Available</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-rose-500/20 border border-rose-500"></span> Occupied</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-cyan-500/20 border border-cyan-500"></span> EV Charger</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-amber-500/20 border border-amber-500"></span> VIP Reserved</div>
+          <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded bg-slate-700 border border-slate-600 border-dashed"></span> Maintenance</div>
+        </div>
+        <div class="text-[11px] text-slate-500 italic">
+          <i class="fa-solid fa-circle-info mr-1 text-blue-400"></i> Click any available bay to Check-In, or occupied bay to Check-Out
+        </div>
+      </div>
+
+      <!-- Parking Lot 2D Visual Bay Grid -->
+      <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800 shadow-inner relative overflow-hidden">
+        
+        <!-- Entrance & Driving Lane Markings -->
+        <div class="flex items-center justify-between text-[11px] font-mono uppercase tracking-wider text-slate-500 pb-3 border-b border-dashed border-slate-800 mb-4">
+          <div class="flex items-center gap-2 text-emerald-400 font-bold">
+            <i class="fa-solid fa-arrow-down-long"></i> INCOMING GATE / ENTRY
+          </div>
+          <div class="text-slate-600 font-semibold tracking-widest">◀ 2-WAY DRIVING AISLE ▶</div>
+          <div class="flex items-center gap-2 text-rose-400 font-bold">
+            OUTGOING GATE / EXIT <i class="fa-solid fa-arrow-up-long"></i>
+          </div>
+        </div>
+
+        <!-- The Responsive Grid Container -->
+        <div id="parkingGridContainer" class="parking-grid">
+          <!-- Dynamically populated by app.js -->
+        </div>
+
+        <!-- Center Driving Lane Stripe -->
+        <div class="parking-aisle rounded my-5"></div>
+
+      </div>
+
+    </section>
+
+    <!-- ANALYTICS CHARTS SECTION -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Floor Utilization Bar Chart -->
+      <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-chart-column text-blue-400"></i>
+            <h2 class="font-bold text-sm text-white">Floor Bay Utilization</h2>
+          </div>
+          <span class="text-[11px] text-slate-400 font-mono">Occupied vs Available</span>
+        </div>
+        <div class="h-56 relative">
+          <canvas id="floorOccupancyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Vehicle Categories Doughnut Chart -->
+      <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-cyan-400"></i>
+            <h2 class="font-bold text-sm text-white">Active Vehicles by Category</h2>
+          </div>
+          <span class="text-[11px] text-slate-400 font-mono">Real-time split</span>
+        </div>
+        <div class="h-56 relative flex items-center justify-center">
+          <canvas id="vehicleCategoryChart"></canvas>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- DATA TABLES SECTION (Active Vehicles & History) -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      
+      <!-- Active Parked Vehicles -->
+      <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20">
+              <i class="fa-solid fa-car"></i>
+            </div>
+            <div>
+              <h2 class="font-bold text-sm text-white">Active Parked Vehicles</h2>
+              <p class="text-xs text-slate-400">Vehicles currently inside parking bays</p>
+            </div>
+          </div>
+          <span id="activeVehiclesBadgeCount" class="text-xs font-semibold px-2.5 py-1 bg-rose-500/10 text-rose-400 rounded-full border border-rose-500/20">-- Active</span>
+        </div>
+
+        <div class="overflow-x-auto flex-1">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider bg-slate-950/40">
+                <th class="py-2.5 px-4 font-semibold">Ticket ID</th>
+                <th class="py-2.5 px-4 font-semibold">Plate #</th>
+                <th class="py-2.5 px-4 font-semibold">Type</th>
+                <th class="py-2.5 px-4 font-semibold">Slot</th>
+                <th class="py-2.5 px-4 font-semibold">In / Duration</th>
+                <th class="py-2.5 px-4 font-semibold">Est. Fee</th>
+                <th class="py-2.5 px-4 font-semibold text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="activeVehiclesTableBody">
+              <!-- Populated by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Checkouts / History -->
+      <div class="bg-slate-900/80 rounded-2xl border border-slate-800 p-5 shadow-xl flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+              <i class="fa-solid fa-receipt"></i>
+            </div>
+            <div>
+              <h2 class="font-bold text-sm text-white">Recent Completed Sessions</h2>
+              <p class="text-xs text-slate-400">Payment receipts & exit logs</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="btnExportCsv" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 text-xs transition flex items-center gap-1.5" title="Export CSV Report">
+              <i class="fa-solid fa-file-csv text-emerald-400"></i> Export CSV
+            </button>
+            <span id="historyBadgeCount" class="text-xs font-semibold px-2.5 py-1 bg-slate-800 text-slate-300 rounded-full border border-slate-700">-- Sessions</span>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto flex-1">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider bg-slate-950/40">
+                <th class="py-2.5 px-4 font-semibold">Receipt #</th>
+                <th class="py-2.5 px-4 font-semibold">Plate #</th>
+                <th class="py-2.5 px-4 font-semibold">Bay</th>
+                <th class="py-2.5 px-4 font-semibold">Time Window</th>
+                <th class="py-2.5 px-4 font-semibold">Billed</th>
+                <th class="py-2.5 px-4 font-semibold">Total Paid</th>
+                <th class="py-2.5 px-4 font-semibold text-right">Invoice</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- Populated by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-slate-900 border-t border-slate-800 py-4 px-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <p>ParkFlow Pro v1.1.0 &copy; Full-Stack Car Parking Management System</p>
+      <div class="flex items-center gap-4 text-slate-400 text-xs">
+        <span>REST API: <code class="text-blue-400 font-mono">/api</code></span>
+        <span>•</span>
+        <span>Chart.js & Web Audio API</span>
+        <span>•</span>
+        <span>QR Thermal Ticketing</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. CHECK-IN MODAL -->
+  <div id="checkInModal" class="modal-overlay hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="px-6 py-4 bg-slate-800/60 border-b border-slate-700/60 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-sm">Vehicle Check-In</h3>
+            <p class="text-[11px] text-slate-400">Issue new parking session ticket</p>
+          </div>
+        </div>
+        <button class="modal-close text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="checkInForm" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">License Plate Number <span class="text-rose-400">*</span></label>
+          <div class="relative">
+            <i class="fa-solid fa-id-card absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+            <input id="checkinPlateNumber" type="text" required placeholder="e.g. KA-01-AB-1234 or NY-7821" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm font-mono uppercase text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 tracking-wider">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Vehicle Type <span class="text-rose-400">*</span></label>
+            <select id="checkinVehicleType" class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500">
+              <option value="Sedan">Sedan / Standard Car</option>
+              <option value="SUV">SUV / Van / 4x4</option>
+              <option value="EV">Electric Vehicle (EV)</option>
+              <option value="Motorcycle">Motorcycle / Two-Wheeler</option>
+              <option value="Truck">Truck / Commercial</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Parking Bay Assignment</label>
+            <select id="checkinSlotSelect" class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500 font-mono">
+              <option value="">-- Auto-Assign Best Available Bay --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tariff Indicator Box -->
+        <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+          <span class="text-slate-400"><i class="fa-solid fa-coins text-amber-400 mr-1.5"></i> Hourly Rate Tariff:</span>
+          <span id="checkinEstimatedRateDisplay" class="font-bold text-emerald-400 font-mono">$3.00 / hour</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Driver Name (Optional)</label>
+            <input id="checkinDriverName" type="text" placeholder="John Doe" class="w-full py-1.5 px-3 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Mobile Number (Optional)</label>
+            <input id="checkinDriverPhone" type="tel" placeholder="+1 234 567 8900" class="w-full py-1.5 px-3 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <button type="button" class="modal-close px-4 py-2 text-xs text-slate-400 hover:text-white rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow-md transition-all">
+            <i class="fa-solid fa-ticket mr-1.5"></i> Assign Bay & Issue Ticket
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- 2. CHECK-OUT & BILLING MODAL -->
+  <div id="checkOutModal" class="modal-overlay hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="px-6 py-4 bg-slate-800/60 border-b border-slate-700/60 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-sm">Vehicle Check-Out & Billing</h3>
+            <p class="text-[11px] text-slate-400">Calculate parking duration & process fee</p>
+          </div>
+        </div>
+        <button class="modal-close text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Scan Ticket ID, License Plate or Slot #</label>
+          <div class="relative">
+            <i class="fa-solid fa-barcode absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input id="checkoutQueryInput" type="text" placeholder="e.g. TKT-1001, KA-01-AB-1234, or A-01" class="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-sm font-mono text-white uppercase focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500">
+          </div>
+        </div>
+
+        <div id="checkoutEmptyPrompt" class="py-8 text-center text-xs text-slate-500 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+          <i class="fa-solid fa-magnifying-glass text-xl mb-1 text-slate-600 block"></i>
+          Enter a Ticket ID or License Plate above to preview the bill.
+        </div>
+
+        <div id="checkoutPreviewBox" class="hidden bg-slate-950 rounded-xl p-4 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
+            <div>
+              <span id="billTicketId" class="font-mono font-bold text-blue-400">--</span>
+              <span id="billVehicleType" class="text-slate-400 ml-2">--</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Bay:</span>
+              <span id="billSlotId" class="font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded">--</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
+            <div>Plate: <strong id="billPlateNumber" class="text-white font-mono">--</strong></div>
+            <div>Entry Time: <strong id="billEntryTime" class="text-white font-mono">--</strong></div>
+            <div>Duration: <strong id="billDuration" class="text-amber-400 font-mono">--</strong></div>
+            <div>Rate: <strong id="billRate" class="text-white font-mono">--</strong></div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/80 space-y-1.5 text-xs">
+            <div class="flex justify-between text-slate-400">
+              <span>Subtotal:</span>
+              <span id="billSubtotal" class="font-mono text-slate-200">$0.00</span>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>Discount:</span>
+              <span id="billDiscount" class="font-mono text-emerald-400">-$0.00</span>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>Sales Tax (8%):</span>
+              <span id="billTax" class="font-mono text-slate-200">+$0.00</span>
+            </div>
+            <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
+              <span>Total Due:</span>
+              <span id="billTotalAmount" class="font-mono text-rose-400 text-base">$0.00</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-2">
+            <div>
+              <label class="block text-[11px] font-medium text-slate-400 mb-1">Discount %</label>
+              <input id="checkoutDiscountInput" type="number" min="0" max="100" value="0" class="w-full py-1.5 px-3 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white">
+            </div>
+            <div>
+              <label class="block text-[11px] font-medium text-slate-400 mb-1">Payment Method</label>
+              <select id="checkoutPaymentMethod" class="w-full py-1.5 px-3 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white">
+                <option value="Cash">Cash</option>
+                <option value="Credit Card">Credit / Debit Card</option>
+                <option value="UPI / QR">UPI / Digital QR</option>
+                <option value="RFID FastTag">RFID FastTag Pass</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <button type="button" class="modal-close px-4 py-2 text-xs text-slate-400 hover:text-white rounded-lg">Cancel</button>
+          <button id="btnConfirmCheckout" disabled class="px-5 py-2 text-xs bg-rose-600 hover:bg-rose-500 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-lg shadow-md transition-all">
+            <i class="fa-solid fa-circle-check mr-1.5"></i> Confirm Payment & Release Bay
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 3. RESERVATION MODAL -->
+  <div id="reservationModal" class="modal-overlay hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="px-6 py-4 bg-slate-800/60 border-b border-slate-700/60 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center">
+            <i class="fa-solid fa-bookmark"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-sm">Reserve Parking Bay</h3>
+            <p id="reserveSlotFloorDisplay" class="text-[11px] text-slate-400">Bay reservation details</p>
+          </div>
+        </div>
+        <button class="modal-close text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="reservationForm" class="p-6 space-y-4">
+        <input type="hidden" id="reserveSlotIdInput">
+
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+          <span class="text-xs text-slate-400">Target Bay ID:</span>
+          <span id="reserveSlotIdDisplay" class="text-sm font-mono font-bold text-amber-400">--</span>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Customer / Guest Name <span class="text-rose-400">*</span></label>
+          <input id="reserveCustomerName" type="text" required placeholder="e.g. Executive Delegation" class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Contact Phone</label>
+          <input id="reserveCustomerPhone" type="tel" placeholder="+1 555 123 4567" class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Notes / Purpose</label>
+          <textarea id="reserveNotes" rows="2" placeholder="VIP Reserved spot, arrives 2:00 PM..." class="w-full py-1.5 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white"></textarea>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+          <button type="button" id="btnCancelReservation" class="hidden px-3 py-1.5 text-xs text-rose-400 hover:text-rose-300 font-medium">Cancel Reservation</button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" class="modal-close px-3 py-1.5 text-xs text-slate-400 hover:text-white">Close</button>
+            <button type="submit" id="btnSubmitReservation" class="px-4 py-1.5 text-xs bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow transition">
+              Confirm Reservation
+            </button>
+          </div>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- 4. THERMAL ENTRY PARKING PASS MODAL (PRINTABLE WITH REAL QR) -->
+  <div id="thermalTicketModal" class="modal-overlay hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-4 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between no-print">
+        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Entry Parking Pass</h4>
+        <button class="modal-close text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Printable Slip -->
+      <div class="printable-area thermal-receipt p-6 rounded-lg text-slate-900 shadow-xl text-center space-y-3">
+        <div class="border-b-2 border-slate-900 pb-2">
+          <h2 class="font-extrabold text-base tracking-tight uppercase">PARKFLOW PRO</h2>
+          <p class="text-[10px] text-slate-600">SMART PARKING COMPLEX - GATE 1</p>
+        </div>
+
+        <div class="py-1">
+          <div class="text-[10px] uppercase text-slate-500">ASSIGNED PARKING BAY</div>
+          <div id="ticketPassSlot" class="text-3xl font-extrabold font-mono tracking-wider text-slate-900 py-1">A-01</div>
+        </div>
+
+        <!-- Real Scannable QR Code Canvas -->
+        <div id="ticketPassQrContainer" class="qr-container"></div>
+        <div id="ticketPassBarcodeId" class="font-mono text-xs tracking-widest text-slate-700 font-bold">TKT-1001</div>
+
+        <div class="text-left text-xs border-t border-b border-dashed border-slate-400 py-2 space-y-1">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Ticket No:</span>
+            <span id="ticketPassId" class="font-mono font-bold">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">License Plate:</span>
+            <span id="ticketPassPlate" class="font-mono font-bold">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Vehicle Type:</span>
+            <span id="ticketPassType" class="font-semibold">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Driver:</span>
+            <span id="ticketPassDriver" class="font-semibold">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Entry Time:</span>
+            <span id="ticketPassEntryTime" class="font-mono text-[11px]">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Tariff:</span>
+            <span id="ticketPassRate" class="font-mono font-bold">--</span>
+          </div>
+        </div>
+
+        <p class="text-[9px] text-slate-500 leading-tight">
+          Please retain this pass until exit. Scan QR code at the automatic gate.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 no-print">
+        <button class="modal-close px-3 py-1.5 text-xs text-slate-400 hover:text-white">Close</button>
+        <button onclick="window.print()" class="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-print"></i> Print Ticket Pass
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. THERMAL CHECKOUT TAX RECEIPT MODAL (PRINTABLE WITH REAL QR) -->
+  <div id="thermalReceiptModal" class="modal-overlay hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-4 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between no-print">
+        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Checkout Tax Invoice</h4>
+        <button class="modal-close text-slate-400 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Printable Slip -->
+      <div class="printable-area thermal-receipt p-6 rounded-lg text-slate-900 shadow-xl space-y-3">
+        <div class="border-b-2 border-slate-900 pb-2 text-center">
+          <h2 class="font-extrabold text-base tracking-tight uppercase">PARKFLOW TAX INVOICE</h2>
+          <p class="text-[10px] text-slate-600">OFFICIAL PAYMENT RECEIPT</p>
+        </div>
+
+        <div class="text-left text-xs space-y-1">
+          <div class="flex justify-between">
+            <span class="text-slate-500">Receipt #:</span>
+            <span id="rcptId" class="font-mono font-bold">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Plate Number:</span>
+            <span id="rcptPlate" class="font-mono font-bold">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Bay / Category:</span>
+            <span id="rcptSlot" class="font-mono">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Entry Time:</span>
+            <span id="rcptEntry" class="font-mono text-[11px]">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Exit Time:</span>
+            <span id="rcptExit" class="font-mono text-[11px]">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Duration:</span>
+            <span id="rcptDuration" class="font-mono font-bold">--</span>
+          </div>
+        </div>
+
+        <div class="border-t border-b border-dashed border-slate-400 py-2 space-y-1 text-xs">
+          <div class="flex justify-between text-slate-600">
+            <span>Subtotal:</span>
+            <span id="rcptSubtotal" class="font-mono">--</span>
+          </div>
+          <div class="flex justify-between text-slate-600">
+            <span>Discount:</span>
+            <span id="rcptDiscount" class="font-mono">--</span>
+          </div>
+          <div class="flex justify-between text-slate-600">
+            <span>Tax (8%):</span>
+            <span id="rcptTax" class="font-mono">--</span>
+          </div>
+          <div class="flex justify-between text-sm font-extrabold text-slate-900 pt-1 border-t border-slate-300">
+            <span>TOTAL PAID:</span>
+            <span id="rcptTotal" class="font-mono text-base">--</span>
+          </div>
+        </div>
+
+        <div class="flex justify-between text-xs text-slate-600">
+          <span>Payment Method:</span>
+          <span id="rcptPaymentMethod" class="font-bold">--</span>
+        </div>
+
+        <!-- Real Scannable Paid Verification QR Code Canvas -->
+        <div id="rcptQrContainer" class="qr-container"></div>
+        <p class="text-[9px] text-slate-500 text-center">
+          Thank you for parking with ParkFlow Pro!<br>Have a safe journey.
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 no-print">
+        <button class="modal-close px-3 py-1.5 text-xs text-slate-400 hover:text-white">Close</button>
+        <button onclick="window.print()" class="px-4 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg shadow flex items-center gap-1.5">
+          <i class="fa-solid fa-print"></i> Print Tax Receipt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. TARIFF RATES CONFIGURATION MODAL -->
+  <div id="tariffsModal" class="modal-overlay hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="px-6 py-4 bg-slate-800/60 border-b border-slate-700/60 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
+            <i class="fa-solid fa-tags"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-sm">Hourly Tariff Settings</h3>
+            <p class="text-[11px] text-slate-400">Configure hourly parking rates per vehicle category</p>
+          </div>
+        </div>
+        <button class="modal-close text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <form id="tariffsForm" class="p-6 space-y-3.5">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Sedan / Standard Car ($/hour)</label>
+          <input id="tariffSedan" type="number" step="0.5" min="0" required class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">SUV / Van / 4x4 ($/hour)</label>
+          <input id="tariffSUV" type="number" step="0.5" min="0" required class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Electric Vehicle with Charging ($/hour)</label>
+          <input id="tariffEV" type="number" step="0.5" min="0" required class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Motorcycle / Two-Wheeler ($/hour)</label>
+          <input id="tariffMotorcycle" type="number" step="0.5" min="0" required class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Truck / Commercial ($/hour)</label>
+          <input id="tariffTruck" type="number" step="0.5" min="0" required class="w-full py-2 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs font-mono text-white">
+        </div>
+
+        <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+          <button type="button" class="modal-close px-4 py-2 text-xs text-slate-400 hover:text-white rounded-lg">Cancel</button>
+          <button type="submit" class="px-5 py-2 text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg shadow-md transition-all">
+            <i class="fa-solid fa-floppy-disk mr-1.5"></i> Save Tariff Rates
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+    <!-- Populated dynamically -->
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
