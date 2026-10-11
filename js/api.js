@@ -3,7 +3,7 @@
  */
 
 // Dynamically routes to Render backend when hosted on Vercel or external host
-const RENDER_BACKEND_URL = 'https://516a9776138614.lhr.life/api';
+const RENDER_BACKEND_URL = 'https://regular-areas-ocean-nat.trycloudflare.com/api';
 
 const API_BASE = window.PARKFLOW_API_URL || 
   (window.location.hostname.includes('vercel.app')
