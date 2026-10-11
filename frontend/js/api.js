@@ -3,7 +3,7 @@
  */
 
 // Dynamically routes to Render backend when hosted on Vercel or external host
-const RENDER_BACKEND_URL = 'https://car-parking-management-backend.onrender.com/api';
+const RENDER_BACKEND_URL = 'https://regular-areas-ocean-nat.trycloudflare.com/api';
 
 const API_BASE = window.PARKFLOW_API_URL || 
   (window.location.hostname.includes('vercel.app')
@@ -134,3 +134,4 @@ const api = {
     });
   }
 };
+
