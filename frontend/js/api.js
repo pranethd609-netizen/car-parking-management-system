@@ -1,10 +1,14 @@
 /**
- * ParkFlow Pro - Backend API Client (Enhanced)
+ * ParkFlow Pro - Backend API Client (Vercel & Render Ready)
  */
 
-const API_BASE = window.location.protocol.startsWith('http')
-  ? `${window.location.origin}/api`
-  : 'http://localhost:5000/api';
+// Dynamically routes to Render backend when hosted on Vercel or external host
+const RENDER_BACKEND_URL = 'https://car-parking-management-backend.onrender.com/api';
+
+const API_BASE = window.PARKFLOW_API_URL || 
+  (window.location.hostname.includes('vercel.app')
+    ? RENDER_BACKEND_URL
+    : (window.location.protocol.startsWith('http') ? `${window.location.origin}/api` : 'http://localhost:5000/api'));
 
 const api = {
   async request(endpoint, options = {}) {
